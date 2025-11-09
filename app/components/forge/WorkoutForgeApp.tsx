@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@whop/react/components";
 import HeaderStatusBar from "./HeaderStatusBar";
 import ForgeReel from "./ForgeReel";
 import ForgeControls from "./ForgeControls";
@@ -16,7 +15,7 @@ export default function WorkoutForgeApp() {
 	const [isSpinning, setIsSpinning] = useState(false);
 	const [results, setResults] = useState<WorkoutResult[]>([]);
 	const [spinHistory, setSpinHistory] = useState<WorkoutResult[]>([]);
-	const [showForgeAgain, setShowForgeAgain] = useState(false);
+	const [savedWorkouts, setSavedWorkouts] = useState<Set<number>>(new Set());
 	const [loadingWorkouts, setLoadingWorkouts] = useState(true);
 	const [loadingHistory, setLoadingHistory] = useState(true);
 	const [loadingSubscription, setLoadingSubscription] = useState(true);
@@ -184,6 +183,47 @@ export default function WorkoutForgeApp() {
 		}
 	};
 
+	// Save individual workout
+	const handleSaveWorkout = async (workout: WorkoutResult, index: number) => {
+		try {
+			const response = await fetch("/api/workout-history", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ workouts: [workout] }),
+			});
+
+			if (response.ok) {
+				// Mark as saved
+				setSavedWorkouts((prev) => new Set(prev).add(index));
+				// Update local history
+				setSpinHistory((prev) => [workout, ...prev].slice(0, 20));
+			} else {
+				// Fallback to localStorage
+				if (typeof window !== "undefined") {
+					setSpinHistory((prev) => {
+						const updated = [workout, ...prev].slice(0, 20);
+						localStorage.setItem("workout-forge-history", JSON.stringify(updated));
+						return updated;
+					});
+					setSavedWorkouts((prev) => new Set(prev).add(index));
+				}
+			}
+		} catch (error) {
+			console.warn("Error saving workout:", error);
+			// Fallback to localStorage
+			if (typeof window !== "undefined") {
+				setSpinHistory((prev) => {
+					const updated = [workout, ...prev].slice(0, 20);
+					localStorage.setItem("workout-forge-history", JSON.stringify(updated));
+					return updated;
+				});
+				setSavedWorkouts((prev) => new Set(prev).add(index));
+			}
+		}
+	};
+
 	// Load workouts on mount
 	useEffect(() => {
 		loadWorkouts();
@@ -303,22 +343,14 @@ export default function WorkoutForgeApp() {
 				return updated;
 			});
 
-			// Save to Supabase only if user has storage (premium)
-			if (subscriptionForSave?.hasStorage) {
-				saveHistory(newResults);
-			}
+			// Reset saved workouts for new results
+			setSavedWorkouts(new Set());
 
-			// Stop spinning and show "Forge Again" button
+			// Stop spinning
 			setIsSpinning(false);
-			setTimeout(() => {
-				setShowForgeAgain(true);
-			}, 400);
 		}, 2000); // 2 seconds as requested
 	};
 
-	const handleForgeAgain = () => {
-		triggerSpin();
-	};
 
 	return (
 		<div className="min-h-screen flex flex-col relative overflow-hidden" style={{
@@ -469,31 +501,65 @@ export default function WorkoutForgeApp() {
 								results={results}
 								isSpinning={isSpinning}
 								spinCount={spinCount}
+								onSaveWorkout={handleSaveWorkout}
+								savedWorkouts={savedWorkouts}
 							/>
 						)}
 
-						{/* Forge Again Button */}
-						{showForgeAgain && (
-							<motion.div
-								className="mt-8"
-								initial={{ opacity: 0, scale: 0.8 }}
-								animate={{ opacity: 1, scale: 1 }}
-								transition={{ duration: 0.3 }}
-							>
-								<Button
-									variant="classic"
-									size="4"
-									onClick={handleForgeAgain}
-									className="uppercase tracking-wider font-mono"
-									style={{
-										fontFamily: "'Orbitron', sans-serif",
-										border: "2px solid #00FFFF",
-										boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
-									}}
+						{/* Save Workout Button for Single Spin */}
+						{spinCount === 1 && results[0] && !isSpinning && (
+							<div className="mt-6 flex justify-center">
+								<motion.button
+									onClick={() => handleSaveWorkout(results[0], 0)}
+									disabled={savedWorkouts.has(0)}
+									className="px-6 py-3 border-2 rounded font-mono text-sm font-bold uppercase transition-all relative overflow-hidden"
+									style={
+										savedWorkouts.has(0)
+											? {
+													borderColor: "#00FF00",
+													background: "rgba(0, 255, 0, 0.1)",
+													color: "#00FF00",
+													boxShadow: "0 0 15px rgba(0, 255, 0, 0.5)",
+													textShadow: "0 0 8px rgba(0, 255, 0, 0.8)",
+													cursor: "default",
+												}
+											: {
+													borderColor: "#00FFFF",
+													background: "rgba(0, 255, 255, 0.05)",
+													color: "#00FFFF",
+													boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
+													textShadow: "0 0 8px rgba(0, 255, 255, 0.8)",
+												}
+									}
+									whileHover={!savedWorkouts.has(0) ? { scale: 1.05 } : {}}
+									whileTap={!savedWorkouts.has(0) ? { scale: 0.95 } : {}}
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 0.5 }}
 								>
-									FORGE AGAIN
-								</Button>
-							</motion.div>
+									{savedWorkouts.has(0) ? (
+										<span className="relative z-10 flex items-center gap-2">
+											<span>✓</span>
+											<span>SAVED</span>
+										</span>
+									) : (
+										<span className="relative z-10">SAVE WORKOUT</span>
+									)}
+									{!savedWorkouts.has(0) && (
+										<motion.div
+											className="absolute inset-0 bg-[#00FFFF]/10"
+											animate={{
+												opacity: [0.3, 0.6, 0.3],
+											}}
+											transition={{
+												duration: 1.5,
+												repeat: Infinity,
+												ease: "easeInOut",
+											}}
+										/>
+									)}
+								</motion.button>
+							</div>
 						)}
 					</div>
 				</div>
