@@ -11,11 +11,13 @@ export async function GET(request: NextRequest) {
 		const headersList = await headers();
 		const { userId } = await whopsdk.verifyUserToken(headersList);
 
-		// Check subscription - only Premium users can view history
+		// Check subscription - only Premium users can view history (or test mode)
 		const { checkUserSubscription } = await import("@/app/api/subscription/check");
 		const subscription = await checkUserSubscription(userId, headersList);
 		
-		if (!subscription.hasStorage) {
+		// Allow access in test mode or if user has storage
+		const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+		if (!subscription.hasStorage && !TEST_MODE) {
 			return NextResponse.json(
 				{ 
 					error: "Storage not available",
@@ -82,13 +84,14 @@ export async function POST(request: NextRequest) {
 		const headersList = await headers();
 		const { userId } = await whopsdk.verifyUserToken(headersList);
 
-		// Check subscription status - only premium users can save
+		// Check subscription status - only premium users can save (or test mode)
 		// Import subscription check logic
 		const { checkUserSubscription } = await import("@/app/api/subscription/check");
 		const subscription = await checkUserSubscription(userId, headersList);
 		
-		// Only premium users can save to database
-		if (!subscription.hasStorage) {
+		// Allow saving in test mode or if user has storage
+		const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+		if (!subscription.hasStorage && !TEST_MODE) {
 			return NextResponse.json(
 				{ 
 					error: "Storage not available",

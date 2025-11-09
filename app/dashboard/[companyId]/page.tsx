@@ -17,8 +17,9 @@ export default async function DashboardPage({
 	// Check subscription status
 	const subscription = await checkUserSubscription(userId, headersList);
 
-	// Only Premium users can access the dashboard (hasAnalytics = Premium)
-	if (!subscription.hasAnalytics) {
+	// Allow access in test mode or if user has analytics (Premium)
+	const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+	if (!subscription.hasAnalytics && !TEST_MODE) {
 		return (
 			<div className="min-h-screen bg-black flex items-center justify-center p-8" style={{
 				background: "#000000",

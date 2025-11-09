@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
 		const headersList = await headers();
 		const { userId } = await whopsdk.verifyUserToken(headersList);
 
-		// Check if user has analytics access (premium)
+		// Check if user has analytics access (premium) or test mode
 		const subscription = await checkUserSubscription(userId, headersList);
-		if (!subscription.hasAnalytics) {
+		const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+		if (!subscription.hasAnalytics && !TEST_MODE) {
 			return NextResponse.json(
 				{ error: "Analytics requires Premium subscription" },
 				{ status: 403 }

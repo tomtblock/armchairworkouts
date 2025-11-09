@@ -6,10 +6,25 @@ import type { SubscriptionStatus, SubscriptionTier } from "./route";
 const STANDARD_PRODUCT_ID = process.env.WHOP_STANDARD_PRODUCT_ID || "";
 const PREMIUM_PRODUCT_ID = process.env.WHOP_PREMIUM_PRODUCT_ID || "";
 
+// Test mode: Set ENABLE_TEST_MODE=true to grant all features for testing
+const TEST_MODE_ENABLED = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+
 export async function checkUserSubscription(
 	userId: string,
 	headersList?: Headers
 ): Promise<SubscriptionStatus> {
+	// TEST MODE: Grant all features for testing
+	if (TEST_MODE_ENABLED) {
+		return {
+			tier: "premium",
+			hasUnlimitedGenerations: true,
+			hasStorage: true,
+			hasAnalytics: true,
+			freeSpinsRemaining: Infinity,
+			products: ["test-mode"],
+		};
+	}
+
 	// Check which products user has access to
 	const userProducts: string[] = [];
 	let hasStandard = false;
