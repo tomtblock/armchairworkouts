@@ -332,10 +332,25 @@ export default function WorkoutForgeApp() {
 			{/* Subscription Status Bar */}
 			{subscription && !loadingSubscription && (
 				<div className="px-4 z-10 relative">
-					<SubscriptionStatusBar 
-						subscription={subscription} 
-						onUpgrade={() => setShowUpgradeModal(true)}
-					/>
+					<div className="flex items-center gap-2 mb-2">
+						<SubscriptionStatusBar 
+							subscription={subscription} 
+							onUpgrade={() => setShowUpgradeModal(true)}
+						/>
+						{subscription.hasAnalytics && (
+							<a
+								href="/dashboard/history"
+								className="px-4 py-2 border-2 border-[#00FFFF] rounded font-mono text-sm font-bold uppercase transition-all hover:bg-[#00FFFF]/10"
+								style={{
+									color: "#00FFFF",
+									boxShadow: "0 0 10px rgba(0, 255, 255, 0.3)",
+									textShadow: "0 0 5px rgba(0, 255, 255, 0.8)",
+								}}
+							>
+								VIEW HISTORY
+							</a>
+						)}
+					</div>
 				</div>
 			)}
 

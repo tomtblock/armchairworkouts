@@ -4,12 +4,7 @@ import { checkUserSubscription } from "@/app/api/subscription/check";
 import WorkoutHistoryDashboard from "@/app/components/forge/WorkoutHistoryDashboard";
 import UpgradeModal from "@/app/components/forge/UpgradeModal";
 
-export default async function DashboardPage({
-	params,
-}: {
-	params: Promise<{ companyId: string }>;
-}) {
-	const { companyId } = await params;
+export default async function DashboardPage() {
 	// Ensure the user is logged in on whop.
 	const headersList = await headers();
 	const { userId } = await whopsdk.verifyUserToken(headersList);

@@ -11,13 +11,27 @@ export async function GET(request: NextRequest) {
 		const headersList = await headers();
 		const { userId } = await whopsdk.verifyUserToken(headersList);
 
-		// Fetch workout history from Supabase
+		// Check subscription - only Premium users can view history
+		const { checkUserSubscription } = await import("@/app/api/subscription/check");
+		const subscription = await checkUserSubscription(userId, headersList);
+		
+		if (!subscription.hasStorage) {
+			return NextResponse.json(
+				{ 
+					error: "Storage not available",
+					message: "Only Premium subscribers can view workout history. Upgrade to Premium for storage and analytics.",
+					requiresUpgrade: true
+				},
+				{ status: 403 }
+			);
+		}
+
+		// Fetch workout history from Supabase (all workouts for Premium users)
 		const { data, error } = await supabaseAdmin
 			.from("workout_history")
 			.select("*")
 			.eq("user_id", userId)
-			.order("created_at", { ascending: false })
-			.limit(20);
+			.order("created_at", { ascending: false });
 
 		if (error) {
 			console.error("Supabase error:", error);
@@ -39,14 +53,16 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		// Convert database records to WorkoutResult format
-		const history: WorkoutResult[] = (data || []).map((record) => ({
+		// Convert database records to WorkoutResult format with dates
+		const history = (data || []).map((record) => ({
 			sets: record.sets,
 			workout: record.workout,
 			amount: record.amount,
 			repsTime: record.reps_time,
 			type: record.type,
 			description: record.description || undefined,
+			createdAt: record.created_at,
+			id: record.id,
 		}));
 
 		return NextResponse.json({ history });
