@@ -279,7 +279,12 @@ export default function WorkoutForgeApp() {
 	}, [minSets, maxSets, minVolume, maxVolume, mode, selectedCategories, randomizer]);
 
 	const triggerSpin = async () => {
-		if (isSpinning || !randomizer || selectedCategories.length === 0) return;
+		console.log("triggerSpin called", { isSpinning, hasRandomizer: !!randomizer, selectedCategories: selectedCategories.length });
+		
+		if (isSpinning || !randomizer || selectedCategories.length === 0) {
+			console.warn("Spin blocked:", { isSpinning, hasRandomizer: !!randomizer, selectedCategories: selectedCategories.length });
+			return;
+		}
 
 		// Load subscription if not loaded yet, but don't block the spin
 		let currentSubscription = subscription;
@@ -296,8 +301,11 @@ export default function WorkoutForgeApp() {
 			};
 		}
 
+		console.log("Subscription check:", currentSubscription);
+
 		// Check if user has spins remaining
 		if (!currentSubscription.hasUnlimitedGenerations && currentSubscription.freeSpinsRemaining < spinCount) {
+			console.warn("Not enough spins remaining");
 			setShowUpgradeModal(true);
 			return;
 		}
@@ -305,7 +313,6 @@ export default function WorkoutForgeApp() {
 		// Reset state
 		setIsSpinning(true);
 		setResults([]);
-		setShowForgeAgain(false);
 
 		// Decrement free spins if not unlimited
 		if (!currentSubscription.hasUnlimitedGenerations && currentSubscription.freeSpinsRemaining >= spinCount) {
@@ -330,24 +337,40 @@ export default function WorkoutForgeApp() {
 		}
 
 		// Generate multiple workouts after 2 seconds (as requested)
-		// Capture currentSubscription in closure
-		const subscriptionForSave = currentSubscription;
 		setTimeout(() => {
-			const newResults = randomizer.generateMultiple(spinCount, minSets, maxSets, minVolume, maxVolume);
-			setResults(newResults);
-			setTotalSpinCount((prev) => prev + spinCount);
+			try {
+				if (!randomizer) {
+					console.error("Randomizer is not initialized");
+					setIsSpinning(false);
+					return;
+				}
 
-			// Update history (keep last 20)
-			setSpinHistory((prev) => {
-				const updated = [...newResults, ...prev].slice(0, 20);
-				return updated;
-			});
+				const newResults = randomizer.generateMultiple(spinCount, minSets, maxSets, minVolume, maxVolume);
+				
+				if (!newResults || newResults.length === 0) {
+					console.error("No workouts generated");
+					setIsSpinning(false);
+					return;
+				}
 
-			// Reset saved workouts for new results
-			setSavedWorkouts(new Set());
+				setResults(newResults);
+				setTotalSpinCount((prev) => prev + spinCount);
 
-			// Stop spinning
-			setIsSpinning(false);
+				// Update history (keep last 20)
+				setSpinHistory((prev) => {
+					const updated = [...newResults, ...prev].slice(0, 20);
+					return updated;
+				});
+
+				// Reset saved workouts for new results
+				setSavedWorkouts(new Set());
+
+				// Stop spinning
+				setIsSpinning(false);
+			} catch (error) {
+				console.error("Error generating workouts:", error);
+				setIsSpinning(false);
+			}
 		}, 2000); // 2 seconds as requested
 	};
 
