@@ -1,3 +1,6 @@
+/* Google Fonts must be imported first, before all other CSS rules */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @layer theme, base, frosted_ui, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
@@ -9,7 +12,235 @@
 @config '../tailwind.config.ts';
 
 body {
-	background: var(--background);
-	color: var(--foreground);
-	font-family: Arial, Helvetica, sans-serif;
+	background: radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%);
+	color: #ffffff;
+	font-family: 'Inter', Arial, Helvetica, sans-serif;
+	min-height: 100vh;
+	position: relative;
+	overflow-x: hidden;
+}
+
+/* Subtle matrix rain effect background */
+body::before {
+	content: '';
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-image: 
+		linear-gradient(transparent 50%, rgba(0, 255, 255, 0.03) 50%),
+		linear-gradient(90deg, transparent 50%, rgba(0, 255, 255, 0.03) 50%);
+	background-size: 100% 4px, 4px 100%;
+	pointer-events: none;
+	z-index: 0;
+	opacity: 0.3;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-family: 'Orbitron', sans-serif;
+}
+
+/* Neon glow utilities */
+.neon-glow {
+	box-shadow: 
+		0 0 5px currentColor,
+		0 0 10px currentColor,
+		0 0 15px currentColor,
+		0 0 20px currentColor;
+}
+
+.neon-border {
+	border: 2px solid;
+	box-shadow: 
+		inset 0 0 10px currentColor,
+		0 0 10px currentColor,
+		0 0 20px currentColor;
+}
+
+.neon-text {
+	text-shadow: 
+		0 0 5px currentColor,
+		0 0 10px currentColor,
+		0 0 15px currentColor,
+		0 0 20px currentColor;
+}
+
+/* Terminal scanline effect */
+@keyframes scanline {
+	0% {
+		transform: translateY(0);
+	}
+	100% {
+		transform: translateY(100vh);
+	}
+}
+
+.scanline {
+	position: relative;
+	overflow: hidden;
+}
+
+.scanline::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.5), transparent);
+	animation: scanline 8s linear infinite;
+	pointer-events: none;
+	z-index: 1000;
+}
+
+/* Terminal window style */
+.terminal-window {
+	background: #000000;
+	border: 3px solid #00FFFF;
+	box-shadow: 
+		inset 0 0 20px rgba(0, 255, 255, 0.1),
+		0 0 20px rgba(0, 255, 255, 0.3),
+		0 0 40px rgba(0, 255, 255, 0.2);
+	position: relative;
+}
+
+.terminal-window::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: 
+		repeating-linear-gradient(
+			0deg,
+			rgba(0, 255, 255, 0.03) 0px,
+			transparent 1px,
+			transparent 2px,
+			rgba(0, 255, 255, 0.03) 3px
+		);
+	pointer-events: none;
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+	from {
+		width: 0;
+	}
+	to {
+		width: 100%;
+	}
+}
+
+.typewriter {
+	overflow: hidden;
+	white-space: nowrap;
+	animation: typewriter 0.5s steps(40, end);
+}
+
+/* Glitch effect */
+@keyframes glitch {
+	0%, 100% {
+		transform: translate(0);
+	}
+	20% {
+		transform: translate(-2px, 2px);
+	}
+	40% {
+		transform: translate(-2px, -2px);
+	}
+	60% {
+		transform: translate(2px, 2px);
+	}
+	80% {
+		transform: translate(2px, -2px);
+	}
+}
+
+.glitch {
+	animation: glitch 0.3s infinite;
+}
+
+/* Pulsing glow */
+@keyframes pulse-glow {
+	0%, 100% {
+		opacity: 1;
+		filter: brightness(1);
+	}
+	50% {
+		opacity: 0.8;
+		filter: brightness(1.2);
+	}
+}
+
+.pulse-glow {
+	animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Neon Slider Styling */
+input[type="range"].slider {
+	-webkit-appearance: none;
+	appearance: none;
+	background: transparent;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: radial-gradient(circle, #00FFFF 0%, #0080FF 100%);
+	border: 2px solid #00FFFF;
+	box-shadow: 
+		0 0 10px rgba(0, 255, 255, 0.8),
+		0 0 20px rgba(0, 255, 255, 0.6),
+		inset 0 2px 4px rgba(255,255,255,0.3);
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+	box-shadow: 
+		0 0 15px rgba(0, 255, 255, 1),
+		0 0 30px rgba(0, 255, 255, 0.8),
+		inset 0 2px 4px rgba(255,255,255,0.4);
+	transform: scale(1.1);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: radial-gradient(circle, #00FFFF 0%, #0080FF 100%);
+	border: 2px solid #00FFFF;
+	box-shadow: 
+		0 0 10px rgba(0, 255, 255, 0.8),
+		0 0 20px rgba(0, 255, 255, 0.6),
+		inset 0 2px 4px rgba(255,255,255,0.3);
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+	box-shadow: 
+		0 0 15px rgba(0, 255, 255, 1),
+		0 0 30px rgba(0, 255, 255, 0.8),
+		inset 0 2px 4px rgba(255,255,255,0.4);
+	transform: scale(1.1);
+}
+
+input[type="range"].slider::-webkit-slider-runnable-track {
+	height: 8px;
+	border-radius: 4px;
+	background: #1a1a1a;
+	border: 1px solid #333;
+}
+
+input[type="range"].slider::-moz-range-track {
+	height: 8px;
+	border-radius: 4px;
+	background: #1a1a1a;
+	border: 1px solid #333;
 }
