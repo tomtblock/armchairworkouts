@@ -40,6 +40,32 @@ export default function WorkoutForgeApp() {
 		loadHistory();
 	}, []);
 
+	// Refresh subscription when window regains focus (after returning from checkout)
+	useEffect(() => {
+		const handleFocus = () => {
+			// Check if we have a pending upgrade
+			const pendingUpgrade = sessionStorage.getItem("pendingUpgrade");
+			if (pendingUpgrade) {
+				sessionStorage.removeItem("pendingUpgrade");
+				// Refresh subscription after a short delay to allow Whop to process
+				setTimeout(() => {
+					loadSubscription();
+				}, 1000);
+			} else {
+				loadSubscription();
+			}
+		};
+		window.addEventListener("focus", handleFocus);
+		// Also check on load in case user navigated back
+		if (typeof window !== "undefined" && sessionStorage.getItem("pendingUpgrade")) {
+			setTimeout(() => {
+				loadSubscription();
+				sessionStorage.removeItem("pendingUpgrade");
+			}, 1000);
+		}
+		return () => window.removeEventListener("focus", handleFocus);
+	}, []);
+
 	const loadSubscription = async () => {
 		try {
 			const response = await fetch("/api/subscription");

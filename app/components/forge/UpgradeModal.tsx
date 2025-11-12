@@ -40,6 +40,10 @@ export default function UpgradeModal({
 			if (response.ok) {
 				const data = await response.json();
 				if (data.checkoutUrl) {
+					// Store a flag to refresh subscription when user returns
+					if (typeof window !== "undefined") {
+						sessionStorage.setItem("pendingUpgrade", tier);
+					}
 					// Open checkout in same window to maintain Whop session
 					window.location.href = data.checkoutUrl;
 				} else {
