@@ -84,7 +84,7 @@ export default function SubscriptionStatusBar({ subscription, onUpgrade }: Subsc
 						whileHover={{ scale: 1.05 }}
 						whileTap={{ scale: 0.95 }}
 						onClick={onUpgrade}
-						className="px-8 py-4 border-2 rounded font-mono text-base font-bold uppercase transition-all"
+						className="px-8 py-4 border-2 rounded font-mono text-base font-bold uppercase transition-all animate-pulse"
 						style={{
 							borderColor: "#00FFFF",
 							background: "linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.1))",
@@ -92,7 +92,6 @@ export default function SubscriptionStatusBar({ subscription, onUpgrade }: Subsc
 							boxShadow: "0 0 30px rgba(0, 255, 255, 0.6), inset 0 0 15px rgba(0, 255, 255, 0.3)",
 							textShadow: "0 0 15px rgba(0, 255, 255, 1), 0 0 25px rgba(0, 255, 255, 0.8)",
 						}}
-						className="px-8 py-4 border-2 rounded font-mono text-base font-bold uppercase transition-all animate-pulse"
 					>
 						UPGRADE
 					</motion.button>
