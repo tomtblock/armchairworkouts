@@ -12,10 +12,50 @@ export default async function DashboardPage({
 	const { companyId } = await params;
 	// Ensure the user is logged in on whop.
 	const headersList = await headers();
-	const { userId } = await whopsdk.verifyUserToken(headersList);
-
-	// Check subscription status
-	const subscription = await checkUserSubscription(userId, headersList);
+	
+	let userId: string;
+	let subscription;
+	
+	try {
+		const result = await whopsdk.verifyUserToken(headersList);
+		userId = result.userId;
+		
+		// Check subscription status
+		subscription = await checkUserSubscription(userId, headersList);
+	} catch (error) {
+		// Handle authentication error - likely accessing directly in localhost
+		console.error("Authentication error:", error);
+		return (
+			<div className="min-h-screen bg-black flex items-center justify-center p-8" style={{
+				background: "#000000",
+			}}>
+				<div className="max-w-md w-full border-2 border-[#00FFFF] rounded-lg p-8 text-center" style={{
+					boxShadow: "0 0 30px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.1)",
+				}}>
+					<h1 className="text-3xl font-bold mb-4" style={{
+						fontFamily: "'Orbitron', sans-serif",
+						color: "#00FFFF",
+						textShadow: "0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5)",
+					}}>
+						AUTHENTICATION REQUIRED
+					</h1>
+					<p className="text-gray-300 mb-6" style={{
+						fontFamily: "'Courier New', monospace",
+					}}>
+						&gt; ACCESS DASHBOARD THROUGH WHOP
+					</p>
+					<p className="text-gray-400 text-sm mb-4">
+						This dashboard must be accessed through your Whop experience.
+					</p>
+					<p className="text-gray-500 text-xs" style={{
+						fontFamily: "'Courier New', monospace",
+					}}>
+						&gt; Go to your Whop and access the app through the Tools section
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	// Allow access in test mode or if user has analytics (Premium)
 	const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
