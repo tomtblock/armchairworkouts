@@ -12,6 +12,7 @@ interface WorkoutHistoryItem {
 	repsTime: string;
 	type: string;
 	description?: string;
+	userComment?: string;
 	createdAt: string;
 	id: string;
 }
@@ -29,6 +30,8 @@ export default function WorkoutHistoryDashboard() {
 	const [loading, setLoading] = useState(true);
 	const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 	const [selectedView, setSelectedView] = useState<"timeline" | "exercises">("timeline");
+	const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+	const [commentText, setCommentText] = useState<string>("");
 
 	useEffect(() => {
 		loadHistory();
@@ -62,6 +65,41 @@ export default function WorkoutHistoryDashboard() {
 		} catch (error) {
 			console.error("Failed to load subscription:", error);
 		}
+	};
+
+	const handleEditComment = (workout: WorkoutHistoryItem) => {
+		setEditingCommentId(workout.id);
+		setCommentText(workout.userComment || "");
+	};
+
+	const handleSaveComment = async (workoutId: string) => {
+		try {
+			const response = await fetch("/api/workout-history/comment", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ workoutId, comment: commentText.trim() || null }),
+			});
+
+			if (response.ok) {
+				// Update local state
+				setHistory((prev) =>
+					prev.map((w) =>
+						w.id === workoutId ? { ...w, userComment: commentText.trim() || undefined } : w
+					)
+				);
+				setEditingCommentId(null);
+				setCommentText("");
+			} else {
+				console.error("Failed to save comment");
+			}
+		} catch (error) {
+			console.error("Error saving comment:", error);
+		}
+	};
+
+	const handleCancelComment = () => {
+		setEditingCommentId(null);
+		setCommentText("");
 	};
 
 	// Calculate exercise statistics
@@ -289,6 +327,66 @@ export default function WorkoutHistoryDashboard() {
 																{workout.description}
 															</div>
 														)}
+														
+														{/* Comment Section */}
+														<div className="mt-3 pt-3 border-t border-[#00FFFF]/20">
+															{editingCommentId === workout.id ? (
+																<div className="space-y-2">
+																	<textarea
+																		value={commentText}
+																		onChange={(e) => setCommentText(e.target.value)}
+																		placeholder="Add a comment about this workout..."
+																		className="w-full p-2 bg-black/50 border border-[#00FFFF] rounded text-white text-sm font-mono resize-none"
+																		style={{
+																			color: "#FFFFFF",
+																			boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
+																		}}
+																		rows={2}
+																	/>
+																	<div className="flex gap-2">
+																		<button
+																			onClick={() => handleSaveComment(workout.id)}
+																			className="px-3 py-1 border border-[#00FF00] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FF00]/10"
+																			style={{
+																				color: "#00FF00",
+																				boxShadow: "0 0 5px rgba(0, 255, 0, 0.3)",
+																			}}
+																		>
+																			SAVE
+																		</button>
+																		<button
+																			onClick={handleCancelComment}
+																			className="px-3 py-1 border border-[#666] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#666]/10 text-gray-400"
+																		>
+																			CANCEL
+																		</button>
+																	</div>
+																</div>
+															) : (
+																<div className="flex items-start justify-between gap-2">
+																	{workout.userComment ? (
+																		<div className="flex-1">
+																			<div className="text-[#00FFFF] text-xs font-mono mb-1">COMMENT:</div>
+																			<div className="text-gray-300 text-sm">{workout.userComment}</div>
+																		</div>
+																	) : (
+																		<div className="text-gray-500 text-xs font-mono italic">
+																			No comment
+																		</div>
+																	)}
+																	<button
+																		onClick={() => handleEditComment(workout)}
+																		className="px-2 py-1 border border-[#00FFFF] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FFFF]/10 flex-shrink-0"
+																		style={{
+																			color: "#00FFFF",
+																			boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
+																		}}
+																	>
+																		{workout.userComment ? "EDIT" : "ADD"}
+																	</button>
+																</div>
+															)}
+														</div>
 													</div>
 												))}
 											</div>

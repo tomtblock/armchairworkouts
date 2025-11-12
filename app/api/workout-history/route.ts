@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
 			repsTime: record.reps_time,
 			type: record.type,
 			description: record.description || undefined,
+			userComment: (record as any).user_comment || undefined,
 			createdAt: record.created_at,
 			id: record.id,
 		}));
