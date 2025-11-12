@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { Button } from "@whop/react/components";
 
 interface UpgradeModalProps {
@@ -18,12 +19,62 @@ export default function UpgradeModal({
 	standardProductUrl,
 	premiumProductUrl,
 }: UpgradeModalProps) {
+	const [productIds, setProductIds] = useState<{ standardProductId: string; premiumProductId: string } | null>(null);
+
+	useEffect(() => {
+		// Fetch product IDs from API
+		fetch("/api/checkout/product-ids")
+			.then(res => res.json())
+			.then(data => setProductIds(data))
+			.catch(err => console.error("Failed to fetch product IDs:", err));
+	}, []);
+
 	if (!isOpen) return null;
 
-	const handleUpgrade = (tier: "standard" | "premium") => {
+	const handleUpgrade = async (tier: "standard" | "premium") => {
+		// If URLs are provided, use them
 		const url = tier === "standard" ? standardProductUrl : premiumProductUrl;
 		if (url) {
-			window.open(url, "_blank");
+			window.location.href = url;
+			return;
+		}
+
+		// Get product ID
+		const productId = tier === "standard" 
+			? productIds?.standardProductId 
+			: productIds?.premiumProductId;
+
+		if (!productId) {
+			console.error(`Product ID not configured for ${tier} tier`);
+			alert(`Product configuration missing. Please contact support.`);
+			return;
+		}
+
+		// Create checkout URL via API
+		try {
+			const response = await fetch("/api/checkout/create", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ productId }),
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				if (data.checkoutUrl) {
+					// Open checkout in same window to maintain Whop session
+					window.location.href = data.checkoutUrl;
+				} else {
+					console.error("No checkout URL returned");
+					alert("Failed to create checkout link. Please try again.");
+				}
+			} else {
+				const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+				console.error("Failed to create checkout:", errorData);
+				alert("Failed to create checkout link. Please try again.");
+			}
+		} catch (error) {
+			console.error("Error creating checkout:", error);
+			alert("An error occurred. Please try again.");
 		}
 	};
 
