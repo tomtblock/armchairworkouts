@@ -41,29 +41,44 @@ export async function POST(request: NextRequest) {
 		const body = await request.json();
 		const spinsUsed = body.spinsUsed || 1;
 
-		// Get current free spins
-		const { data: userData } = await supabaseAdmin
+		// Get current free spins (use maybeSingle to avoid error when no row exists)
+		const { data: userData, error: fetchError } = await supabaseAdmin
 			.from("user_subscriptions")
 			.select("free_spins_remaining")
 			.eq("user_id", userId)
-			.single();
+			.maybeSingle();
+
+		if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected
+			console.error("Error fetching user subscription:", fetchError);
+			throw fetchError;
+		}
 
 		if (!userData) {
 			// Initialize user
-			await supabaseAdmin
+			const { error: insertError } = await supabaseAdmin
 				.from("user_subscriptions")
 				.insert({
 					user_id: userId,
 					free_spins_remaining: Math.max(0, 2 - spinsUsed),
 					tier: "free",
 				});
+			
+			if (insertError) {
+				console.error("Error inserting user subscription:", insertError);
+				throw insertError;
+			}
 		} else {
 			// Update free spins
 			const newRemaining = Math.max(0, (userData.free_spins_remaining || 0) - spinsUsed);
-			await supabaseAdmin
+			const { error: updateError } = await supabaseAdmin
 				.from("user_subscriptions")
 				.update({ free_spins_remaining: newRemaining })
 				.eq("user_id", userId);
+			
+			if (updateError) {
+				console.error("Error updating user subscription:", updateError);
+				throw updateError;
+			}
 		}
 
 		return NextResponse.json({ success: true });

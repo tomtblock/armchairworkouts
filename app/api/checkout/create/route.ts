@@ -83,30 +83,25 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Fallback: Construct Whop checkout URL directly
-		// Format: https://whop.com/{companyRoute}/checkout?product={productId} or https://whop.com/checkout/{productId}
+		// Whop products can be accessed via their product page which has a checkout button
+		// Format: https://whop.com/{productId} or https://whop.com/checkout/{productId}
 		if (!checkoutUrl) {
 			const baseUrl = "https://whop.com";
-			// Try to construct a proper checkout URL
+			// Try multiple URL formats
 			if (companyRoute) {
+				// Try company-specific checkout
 				checkoutUrl = `${baseUrl}/${companyRoute}/checkout?product=${productId}`;
 			} else {
-				// Use the product's direct checkout page
-				// Whop products can be accessed via /checkout/{productId} or /{productId}
-				checkoutUrl = `${baseUrl}/checkout/${productId}`;
+				// Use direct product page - Whop will handle checkout
+				// Most reliable: just use the product ID as the route
+				checkoutUrl = `${baseUrl}/${productId}`;
 			}
 		}
 		
-		// Validate we have a URL
+		// Always return a URL - even if it's a fallback
 		if (!checkoutUrl || checkoutUrl.trim() === "") {
-			console.error("Failed to generate checkout URL", { productId, companyRoute, companyId });
-			return NextResponse.json(
-				{ 
-					error: "Failed to create checkout URL",
-					message: "Could not generate checkout URL. Please verify your product IDs are correct.",
-					details: `Product ID: ${productId}, Company Route: ${companyRoute || "not found"}`
-				},
-				{ status: 500 }
-			);
+			// Last resort: use product ID directly
+			checkoutUrl = `https://whop.com/${productId}`;
 		}
 
 		return NextResponse.json({
