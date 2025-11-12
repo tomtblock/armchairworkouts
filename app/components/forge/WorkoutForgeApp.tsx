@@ -343,13 +343,32 @@ export default function WorkoutForgeApp() {
 		// Decrement free spins if not unlimited
 		if (!currentSubscription.hasUnlimitedGenerations && currentSubscription.freeSpinsRemaining >= spinCount) {
 			try {
-				await fetch("/api/subscription", {
+				const response = await fetch("/api/subscription", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ spinsUsed: spinCount }),
 				});
-				// Reload subscription status (don't await to avoid blocking)
-				loadSubscription();
+				
+				if (response.ok) {
+					// Update local state immediately for better UX
+					if (currentSubscription) {
+						setSubscription({
+							...currentSubscription,
+							freeSpinsRemaining: Math.max(0, currentSubscription.freeSpinsRemaining - spinCount),
+						});
+					}
+					// Reload subscription status to sync with server
+					loadSubscription();
+				} else {
+					console.error("Failed to update free spins:", await response.text());
+					// Update local state even if API fails
+					if (currentSubscription) {
+						setSubscription({
+							...currentSubscription,
+							freeSpinsRemaining: Math.max(0, currentSubscription.freeSpinsRemaining - spinCount),
+						});
+					}
+				}
 			} catch (error) {
 				console.error("Failed to update free spins:", error);
 				// Update local state even if API fails

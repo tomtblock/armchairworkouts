@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
 				});
 				
 				checkoutUrl = checkoutConfig.purchase_url;
+			} else {
+				console.warn("No plan found for product:", productId);
 			}
 		} catch (error) {
 			console.warn("Could not create checkout configuration, using fallback URL:", error);
@@ -81,15 +83,30 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Fallback: Construct Whop checkout URL directly
-		// Format: https://whop.com/checkout/{productId} or https://whop.com/{companyRoute}/checkout?product={productId}
+		// Format: https://whop.com/{companyRoute}/checkout?product={productId} or https://whop.com/checkout/{productId}
 		if (!checkoutUrl) {
 			const baseUrl = "https://whop.com";
+			// Try to construct a proper checkout URL
 			if (companyRoute) {
 				checkoutUrl = `${baseUrl}/${companyRoute}/checkout?product=${productId}`;
 			} else {
-				// Try direct product checkout URL
+				// Use the product's direct checkout page
+				// Whop products can be accessed via /checkout/{productId} or /{productId}
 				checkoutUrl = `${baseUrl}/checkout/${productId}`;
 			}
+		}
+		
+		// Validate we have a URL
+		if (!checkoutUrl || checkoutUrl.trim() === "") {
+			console.error("Failed to generate checkout URL", { productId, companyRoute, companyId });
+			return NextResponse.json(
+				{ 
+					error: "Failed to create checkout URL",
+					message: "Could not generate checkout URL. Please verify your product IDs are correct.",
+					details: `Product ID: ${productId}, Company Route: ${companyRoute || "not found"}`
+				},
+				{ status: 500 }
+			);
 		}
 
 		return NextResponse.json({
