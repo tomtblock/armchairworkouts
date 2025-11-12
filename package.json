@@ -9,6 +9,7 @@
 		"lint": "biome lint"
 	},
 	"dependencies": {
+		"@netlify/blobs": "^10.3.3",
 		"@supabase/supabase-js": "^2.80.0",
 		"@vercel/functions": "^3.1.4",
 		"@whop/react": "0.3.0",
