@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { whopsdk } from "@/lib/whop-sdk";
 import { checkUserSubscription } from "@/app/api/subscription/check";
 import WorkoutHistoryDashboard from "@/app/components/forge/WorkoutHistoryDashboard";
-import UpgradeModal from "@/app/components/forge/UpgradeModal";
 
 export default async function DashboardPage({
 	params,
@@ -57,9 +56,45 @@ export default async function DashboardPage({
 		);
 	}
 
-	// Allow access in test mode or if user has analytics (Premium)
 	const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
-	if (!subscription.hasAnalytics && !TEST_MODE) {
+	
+	// Free users - no dashboard access
+	if (subscription.tier === "free" && !TEST_MODE) {
+		return (
+			<div className="min-h-screen bg-black flex items-center justify-center p-8" style={{
+				background: "#000000",
+			}}>
+				<div className="max-w-md w-full border-2 border-[#00FFFF] rounded-lg p-8 text-center" style={{
+					boxShadow: "0 0 30px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.1)",
+				}}>
+					<h1 className="text-3xl font-bold mb-4" style={{
+						fontFamily: "'Orbitron', sans-serif",
+						color: "#00FFFF",
+						textShadow: "0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5)",
+					}}>
+						DASHBOARD LOCKED
+					</h1>
+					<p className="text-gray-300 mb-6" style={{
+						fontFamily: "'Courier New', monospace",
+					}}>
+						&gt; UPGRADE TO ACCESS DASHBOARD
+					</p>
+					<p className="text-gray-400 text-sm mb-4">
+						The dashboard is available for Standard and Premium members.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Standard users - view-only dashboard
+	if (subscription.tier === "standard" && !TEST_MODE) {
+		const { default: StandardDashboard } = await import("@/app/components/forge/StandardDashboard");
+		return <StandardDashboard />;
+	}
+
+	// Premium users (or test mode) get the full dashboard
+	return <WorkoutHistoryDashboard />;
 		return (
 			<div className="min-h-screen bg-black flex items-center justify-center p-8" style={{
 				background: "#000000",

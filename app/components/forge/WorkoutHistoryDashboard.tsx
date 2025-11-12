@@ -23,6 +23,9 @@ interface ExerciseStats {
 	totalSets: number;
 	totalReps: number;
 	lastCompleted: string;
+	firstCompleted: string;
+	completionDates: string[];
+	frequency?: number; // Workouts per week
 }
 
 export default function WorkoutHistoryDashboard() {
@@ -68,11 +71,20 @@ export default function WorkoutHistoryDashboard() {
 	};
 
 	const handleEditComment = (workout: WorkoutHistoryItem) => {
+		// Only Premium users can add/edit comments
+		if (!subscription?.hasStorage) {
+			return;
+		}
 		setEditingCommentId(workout.id);
 		setCommentText(workout.userComment || "");
 	};
 
 	const handleSaveComment = async (workoutId: string) => {
+		// Only Premium users can save comments
+		if (!subscription?.hasStorage) {
+			return;
+		}
+		
 		try {
 			const response = await fetch("/api/workout-history/comment", {
 				method: "PATCH",
@@ -102,7 +114,7 @@ export default function WorkoutHistoryDashboard() {
 		setCommentText("");
 	};
 
-	// Calculate exercise statistics
+	// Calculate exercise statistics with frequency
 	const exerciseStats: ExerciseStats[] = Object.entries(
 		history.reduce((acc, workout) => {
 			const exercise = workout.workout;
@@ -113,18 +125,34 @@ export default function WorkoutHistoryDashboard() {
 					totalSets: 0,
 					totalReps: 0,
 					lastCompleted: workout.createdAt,
+					firstCompleted: workout.createdAt,
+					completionDates: [],
 				};
 			}
 			acc[exercise].totalCompleted++;
 			acc[exercise].totalSets += workout.sets;
 			acc[exercise].totalReps += typeof workout.amount === "number" ? workout.amount : parseInt(String(workout.amount)) || 0;
-			if (new Date(workout.createdAt) > new Date(acc[exercise].lastCompleted)) {
+			acc[exercise].completionDates.push(workout.createdAt);
+			
+			const workoutDate = new Date(workout.createdAt);
+			if (workoutDate > new Date(acc[exercise].lastCompleted)) {
 				acc[exercise].lastCompleted = workout.createdAt;
+			}
+			if (workoutDate < new Date(acc[exercise].firstCompleted)) {
+				acc[exercise].firstCompleted = workout.createdAt;
 			}
 			return acc;
 		}, {} as Record<string, ExerciseStats>)
 	)
-		.map(([_, stats]) => stats)
+		.map(([_, stats]) => {
+			// Calculate frequency (workouts per week)
+			const firstDate = new Date(stats.firstCompleted);
+			const lastDate = new Date(stats.lastCompleted);
+			const daysDiff = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+			const weeks = daysDiff / 7;
+			stats.frequency = weeks > 0 ? (stats.totalCompleted / weeks) : stats.totalCompleted;
+			return stats;
+		})
 		.sort((a, b) => b.totalCompleted - a.totalCompleted);
 
 	// Group workouts by date
@@ -307,19 +335,28 @@ export default function WorkoutHistoryDashboard() {
 															</div>
 															<div className="flex gap-4 text-sm">
 																<div>
-																	<div className="text-[#00FFFF] font-mono">SETS</div>
-																	<div className="text-white font-bold">{workout.sets}</div>
+																	<div className="text-[#00FFFF] font-mono text-xs">SETS</div>
+																	<div className="text-white font-bold text-lg">{workout.sets}</div>
 																</div>
 																<div>
-																	<div className="text-[#00FFFF] font-mono">{workout.repsTime.toUpperCase()}</div>
-																	<div className="text-white font-bold">{workout.amount}</div>
+																	<div className="text-[#00FFFF] font-mono text-xs">{workout.repsTime.toUpperCase()}</div>
+																	<div className="text-white font-bold text-lg">{workout.amount}</div>
 																</div>
 															</div>
-															<div className="text-xs text-gray-500 font-mono">
-																{new Date(workout.createdAt).toLocaleTimeString("en-GB", {
-																	hour: "2-digit",
-																	minute: "2-digit",
-																})}
+															<div className="text-right">
+																<div className="text-[#00FFFF] font-mono text-xs mb-1">TIME</div>
+																<div className="text-white font-bold">
+																	{new Date(workout.createdAt).toLocaleTimeString("en-GB", {
+																		hour: "2-digit",
+																		minute: "2-digit",
+																	})}
+																</div>
+																<div className="text-gray-500 text-xs mt-1">
+																	{new Date(workout.createdAt).toLocaleDateString("en-GB", {
+																		day: "numeric",
+																		month: "short",
+																	})}
+																</div>
 															</div>
 														</div>
 														{workout.description && (
@@ -328,65 +365,67 @@ export default function WorkoutHistoryDashboard() {
 															</div>
 														)}
 														
-														{/* Comment Section */}
-														<div className="mt-3 pt-3 border-t border-[#00FFFF]/20">
-															{editingCommentId === workout.id ? (
-																<div className="space-y-2">
-																	<textarea
-																		value={commentText}
-																		onChange={(e) => setCommentText(e.target.value)}
-																		placeholder="Add a comment about this workout..."
-																		className="w-full p-2 bg-black/50 border border-[#00FFFF] rounded text-white text-sm font-mono resize-none"
-																		style={{
-																			color: "#FFFFFF",
-																			boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
-																		}}
-																		rows={2}
-																	/>
-																	<div className="flex gap-2">
-																		<button
-																			onClick={() => handleSaveComment(workout.id)}
-																			className="px-3 py-1 border border-[#00FF00] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FF00]/10"
+														{/* Comment Section - Only for Premium users */}
+														{subscription?.hasStorage && (
+															<div className="mt-3 pt-3 border-t border-[#00FFFF]/20">
+																{editingCommentId === workout.id ? (
+																	<div className="space-y-2">
+																		<textarea
+																			value={commentText}
+																			onChange={(e) => setCommentText(e.target.value)}
+																			placeholder="Add a comment about this workout..."
+																			className="w-full p-2 bg-black/50 border border-[#00FFFF] rounded text-white text-sm font-mono resize-none"
 																			style={{
-																				color: "#00FF00",
-																				boxShadow: "0 0 5px rgba(0, 255, 0, 0.3)",
+																				color: "#FFFFFF",
+																				boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
+																			}}
+																			rows={2}
+																		/>
+																		<div className="flex gap-2">
+																			<button
+																				onClick={() => handleSaveComment(workout.id)}
+																				className="px-3 py-1 border border-[#00FF00] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FF00]/10"
+																				style={{
+																					color: "#00FF00",
+																					boxShadow: "0 0 5px rgba(0, 255, 0, 0.3)",
+																				}}
+																			>
+																				SAVE
+																			</button>
+																			<button
+																				onClick={handleCancelComment}
+																				className="px-3 py-1 border border-[#666] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#666]/10 text-gray-400"
+																			>
+																				CANCEL
+																			</button>
+																		</div>
+																	</div>
+																) : (
+																	<div className="flex items-start justify-between gap-2">
+																		{workout.userComment ? (
+																			<div className="flex-1">
+																				<div className="text-[#00FFFF] text-xs font-mono mb-1">COMMENT:</div>
+																				<div className="text-gray-300 text-sm">{workout.userComment}</div>
+																			</div>
+																		) : (
+																			<div className="text-gray-500 text-xs font-mono italic">
+																				No comment
+																			</div>
+																		)}
+																		<button
+																			onClick={() => handleEditComment(workout)}
+																			className="px-2 py-1 border border-[#00FFFF] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FFFF]/10 flex-shrink-0"
+																			style={{
+																				color: "#00FFFF",
+																				boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
 																			}}
 																		>
-																			SAVE
-																		</button>
-																		<button
-																			onClick={handleCancelComment}
-																			className="px-3 py-1 border border-[#666] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#666]/10 text-gray-400"
-																		>
-																			CANCEL
+																			{workout.userComment ? "EDIT" : "ADD"}
 																		</button>
 																	</div>
-																</div>
-															) : (
-																<div className="flex items-start justify-between gap-2">
-																	{workout.userComment ? (
-																		<div className="flex-1">
-																			<div className="text-[#00FFFF] text-xs font-mono mb-1">COMMENT:</div>
-																			<div className="text-gray-300 text-sm">{workout.userComment}</div>
-																		</div>
-																	) : (
-																		<div className="text-gray-500 text-xs font-mono italic">
-																			No comment
-																		</div>
-																	)}
-																	<button
-																		onClick={() => handleEditComment(workout)}
-																		className="px-2 py-1 border border-[#00FFFF] rounded text-xs font-mono font-bold uppercase transition-all hover:bg-[#00FFFF]/10 flex-shrink-0"
-																		style={{
-																			color: "#00FFFF",
-																			boxShadow: "0 0 5px rgba(0, 255, 255, 0.3)",
-																		}}
-																	>
-																		{workout.userComment ? "EDIT" : "ADD"}
-																	</button>
-																</div>
-															)}
-														</div>
+																)}
+															</div>
+														)}
 													</div>
 												))}
 											</div>
@@ -424,29 +463,62 @@ export default function WorkoutHistoryDashboard() {
 													}}>
 														{stat.exercise}
 													</h4>
-													<div className="grid grid-cols-3 gap-4 text-sm">
+													<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 														<div>
-															<div className="text-[#00FFFF] font-mono text-xs mb-1">COMPLETED</div>
+															<div className="text-[#00FFFF] font-mono text-xs mb-1">TIMES COMPLETED</div>
 															<div className="text-white font-bold text-lg">{stat.totalCompleted}</div>
 														</div>
 														<div>
-															<div className="text-[#00FFFF] font-mono text-xs mb-1">TOTAL SETS</div>
+															<div className="text-[#00FFFF] font-mono text-xs mb-1">CUMULATIVE SETS</div>
 															<div className="text-white font-bold text-lg">{stat.totalSets}</div>
 														</div>
 														<div>
-															<div className="text-[#00FFFF] font-mono text-xs mb-1">TOTAL REPS</div>
+															<div className="text-[#00FFFF] font-mono text-xs mb-1">CUMULATIVE REPS</div>
 															<div className="text-white font-bold text-lg">{stat.totalReps}</div>
 														</div>
+														<div>
+															<div className="text-[#00FFFF] font-mono text-xs mb-1">FREQUENCY</div>
+															<div className="text-white font-bold text-lg">
+																{stat.frequency ? stat.frequency.toFixed(1) : "N/A"}
+															</div>
+															<div className="text-gray-400 text-xs">per week</div>
+														</div>
 													</div>
-												</div>
-												<div className="text-right">
-													<div className="text-[#00FFFF] font-mono text-xs mb-1">LAST COMPLETED</div>
-													<div className="text-gray-400 text-xs">
-														{new Date(stat.lastCompleted).toLocaleDateString("en-GB", {
-															day: "numeric",
-															month: "short",
-															year: "numeric",
-														})}
+													<div className="mt-3 pt-3 border-t border-[#00FFFF]/20">
+														<div className="grid grid-cols-2 gap-4 text-xs">
+															<div>
+																<div className="text-[#00FFFF] font-mono mb-1">FIRST COMPLETED</div>
+																<div className="text-gray-300">
+																	{new Date(stat.firstCompleted).toLocaleDateString("en-GB", {
+																		day: "numeric",
+																		month: "short",
+																		year: "numeric",
+																	})}
+																</div>
+																<div className="text-gray-500 text-xs mt-1">
+																	{new Date(stat.firstCompleted).toLocaleTimeString("en-GB", {
+																		hour: "2-digit",
+																		minute: "2-digit",
+																	})}
+																</div>
+															</div>
+															<div>
+																<div className="text-[#00FFFF] font-mono mb-1">LAST COMPLETED</div>
+																<div className="text-gray-300">
+																	{new Date(stat.lastCompleted).toLocaleDateString("en-GB", {
+																		day: "numeric",
+																		month: "short",
+																		year: "numeric",
+																	})}
+																</div>
+																<div className="text-gray-500 text-xs mt-1">
+																	{new Date(stat.lastCompleted).toLocaleTimeString("en-GB", {
+																		hour: "2-digit",
+																		minute: "2-digit",
+																	})}
+																</div>
+															</div>
+														</div>
 													</div>
 												</div>
 											</div>

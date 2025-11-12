@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { whopsdk } from "@/lib/whop-sdk";
 import { checkUserSubscription } from "@/app/api/subscription/check";
 import WorkoutHistoryDashboard from "@/app/components/forge/WorkoutHistoryDashboard";
-import UpgradeModal from "@/app/components/forge/UpgradeModal";
 
 export default async function DashboardPage() {
 	// Ensure the user is logged in on whop.
@@ -52,9 +51,10 @@ export default async function DashboardPage() {
 		);
 	}
 
-	// Allow access in test mode or if user has analytics (Premium)
 	const TEST_MODE = process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
-	if (!subscription.hasAnalytics && !TEST_MODE) {
+	
+	// Free users - no dashboard access
+	if (subscription.tier === "free" && !TEST_MODE) {
 		return (
 			<div className="min-h-screen bg-black flex items-center justify-center p-8" style={{
 				background: "#000000",
@@ -81,41 +81,34 @@ export default async function DashboardPage() {
 						color: "#00FFFF",
 						textShadow: "0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5)",
 					}}>
-						PREMIUM DASHBOARD
+						DASHBOARD LOCKED
 					</h1>
 					<p className="text-gray-300 mb-6" style={{
 						fontFamily: "'Courier New', monospace",
 					}}>
-						&gt; UPGRADE TO PREMIUM TO ACCESS WORKOUT HISTORY
+						&gt; UPGRADE TO ACCESS DASHBOARD
 					</p>
-					<div className="space-y-2 text-left mb-6">
-						<div className="text-white flex items-center gap-2">
-							<span className="text-[#00FF00]">✓</span>
-							<span>View all completed workouts with dates</span>
-						</div>
-						<div className="text-white flex items-center gap-2">
-							<span className="text-[#00FF00]">✓</span>
-							<span>Track cumulative totals per exercise</span>
-						</div>
-						<div className="text-white flex items-center gap-2">
-							<span className="text-[#00FF00]">✓</span>
-							<span>Analytics dashboard with insights</span>
-						</div>
-						<div className="text-white flex items-center gap-2">
-							<span className="text-[#00FF00]">✓</span>
-							<span>Workout history storage</span>
-						</div>
-					</div>
+					<p className="text-gray-400 text-sm mb-4">
+						The dashboard is available for Standard and Premium members.
+					</p>
 					<div className="p-4 border border-[#00FFFF] rounded mb-4" style={{
 						background: "rgba(0, 255, 255, 0.1)",
 					}}>
-						<p className="text-[#00FFFF] font-semibold text-xl mb-2" style={{
+						<p className="text-[#00FFFF] font-semibold text-lg mb-2" style={{
 							fontFamily: "'Orbitron', sans-serif",
 						}}>
-							£3.99/month
+							Standard: £1.99/month
+						</p>
+						<p className="text-gray-400 text-sm mb-4">
+							View dashboard (no save/comment)
+						</p>
+						<p className="text-[#00FFFF] font-semibold text-lg mb-2" style={{
+							fontFamily: "'Orbitron', sans-serif",
+						}}>
+							Premium: £3.99/month
 						</p>
 						<p className="text-gray-400 text-sm">
-							Includes unlimited generations, storage, and analytics
+							Full dashboard with storage and analytics
 						</p>
 					</div>
 					<p className="text-gray-500 text-xs" style={{
@@ -128,7 +121,13 @@ export default async function DashboardPage() {
 		);
 	}
 
-	// Premium users get the full dashboard
+	// Standard users - view-only dashboard
+	if (subscription.tier === "standard" && !TEST_MODE) {
+		const { default: StandardDashboard } = await import("@/app/components/forge/StandardDashboard");
+		return <StandardDashboard />;
+	}
+
+	// Premium users (or test mode) get the full dashboard
 	return <WorkoutHistoryDashboard />;
 }
 
