@@ -49,7 +49,9 @@ export default function UpgradeModal({
 			} else {
 				const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
 				console.error("Failed to create checkout:", errorData);
-				alert("Failed to create checkout link. Please try again.");
+				// Show more helpful error message
+				const errorMessage = errorData.message || errorData.error || "Failed to create checkout link. Please try again.";
+				alert(errorMessage);
 			}
 		} catch (error) {
 			console.error("Error creating checkout:", error);

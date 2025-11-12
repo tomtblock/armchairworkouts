@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({
 			checkoutUrl,
 			productId,
+			tier,
 		});
 	} catch (error) {
 		console.error("Error creating checkout:", error);
