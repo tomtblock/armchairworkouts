@@ -19,16 +19,6 @@ export default function UpgradeModal({
 	standardProductUrl,
 	premiumProductUrl,
 }: UpgradeModalProps) {
-	const [productIds, setProductIds] = useState<{ standardProductId: string; premiumProductId: string } | null>(null);
-
-	useEffect(() => {
-		// Fetch product IDs from API
-		fetch("/api/checkout/product-ids")
-			.then(res => res.json())
-			.then(data => setProductIds(data))
-			.catch(err => console.error("Failed to fetch product IDs:", err));
-	}, []);
-
 	if (!isOpen) return null;
 
 	const handleUpgrade = async (tier: "standard" | "premium") => {
@@ -39,23 +29,12 @@ export default function UpgradeModal({
 			return;
 		}
 
-		// Get product ID
-		const productId = tier === "standard" 
-			? productIds?.standardProductId 
-			: productIds?.premiumProductId;
-
-		if (!productId) {
-			console.error(`Product ID not configured for ${tier} tier`);
-			alert(`Product configuration missing. Please contact support.`);
-			return;
-		}
-
-		// Create checkout URL via API
+		// Create checkout URL via API (pass tier instead of productId)
 		try {
 			const response = await fetch("/api/checkout/create", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ productId }),
+				body: JSON.stringify({ tier }),
 			});
 
 			if (response.ok) {

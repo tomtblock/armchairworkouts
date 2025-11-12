@@ -11,11 +11,21 @@ export async function POST(request: NextRequest) {
 
 		// Parse request body
 		const body = await request.json();
-		const { productId } = body;
+		const { tier } = body; // Accept "standard" or "premium" instead of productId
+
+		// Get product ID from environment based on tier
+		const productId = tier === "standard" 
+			? process.env.WHOP_STANDARD_PRODUCT_ID 
+			: tier === "premium"
+			? process.env.WHOP_PREMIUM_PRODUCT_ID
+			: null;
 
 		if (!productId) {
 			return NextResponse.json(
-				{ error: "Product ID is required" },
+				{ 
+					error: "Product configuration missing",
+					message: `Product ID for ${tier} tier is not configured. Please set WHOP_${tier.toUpperCase()}_PRODUCT_ID in your environment variables.`
+				},
 				{ status: 400 }
 			);
 		}
@@ -41,21 +51,25 @@ export async function POST(request: NextRequest) {
 		try {
 			// List plans for the product
 			const plansIterator = whopsdk.plans.list({ product_id: productId });
-			const firstPlan = await plansIterator.next();
 			
-			if (firstPlan && !firstPlan.done && firstPlan.value) {
-				const plan = firstPlan.value;
-				
+			// Get the first plan
+			let planId = "";
+			let planCompanyId = companyId;
+			
+			for await (const plan of plansIterator) {
+				planId = plan.id;
+				planCompanyId = (plan as any).company_id || companyId;
+				break; // Just get the first plan
+			}
+			
+			if (planId && planCompanyId) {
 				// Get redirect URL
-				const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || 
-				                    process.env.NEXT_PUBLIC_VERCEL_URL 
-				                    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` 
-				                    : "https://whop.com";
+				const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || "https://whop.com";
 				
 				// Create checkout configuration
 				const checkoutConfig = await whopsdk.checkoutConfigurations.create({
-					plan_id: plan.id,
-					company_id: companyId || (plan as any).company_id || "",
+					plan_id: planId,
+					company_id: planCompanyId,
 					redirect_url: redirectUrl,
 				});
 				
@@ -63,6 +77,7 @@ export async function POST(request: NextRequest) {
 			}
 		} catch (error) {
 			console.warn("Could not create checkout configuration, using fallback URL:", error);
+			console.error("Checkout error details:", error);
 		}
 
 		// Fallback: Construct Whop checkout URL directly
