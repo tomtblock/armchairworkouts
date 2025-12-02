@@ -1,26 +1,33 @@
 "use client";
 
-import { WhopApp } from "@whop/react/components";
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
+
+// Dynamically import WhopApp only on the client side
+// This prevents build-time SDK initialization errors when env vars aren't available
+const WhopAppDynamic = dynamic(
+	() => import("@whop/react/components").then(mod => mod.WhopApp),
+	{ 
+		ssr: false,
+	}
+);
 
 /**
- * Client-side wrapper for WhopApp to prevent build-time SDK initialization errors.
- * The WhopApp component requires NEXT_PUBLIC_WHOP_APP_ID which may not be
- * available during static page generation (e.g., /_not-found).
+ * Wrapper for WhopApp component.
+ * Uses dynamic import to prevent build-time SDK initialization errors.
+ * The WhopApp component only loads on the client side.
  */
-export function WhopAppWrapper({ children }: { children: React.ReactNode }) {
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	// During SSR/build, just render children without WhopApp wrapper
-	// This prevents the SDK from trying to initialize during build
-	if (!mounted) {
+export function WhopAppWrapper({ children }: { children: ReactNode }) {
+	// Check if app ID is available at build/runtime
+	const hasAppId = !!process.env.NEXT_PUBLIC_WHOP_APP_ID;
+	
+	if (!hasAppId) {
+		// No app ID - render children directly
 		return <>{children}</>;
 	}
 
-	return <WhopApp>{children}</WhopApp>;
+	// Render with dynamically loaded WhopApp
+	// Children are passed through whether or not WhopApp has loaded
+	return <WhopAppDynamic>{children}</WhopAppDynamic>;
 }
 
