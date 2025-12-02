@@ -18,7 +18,7 @@ export { animate, createTimeline, stagger, createSpring, createDraggable, utils 
 // Type definitions for common animation options
 export interface AnimeAnimationOptions {
 	duration?: number;
-	delay?: number | ((el: Element, index: number) => number);
+	delay?: number;
 	ease?: string;
 	loop?: boolean | number;
 	autoplay?: boolean;
@@ -397,12 +397,12 @@ export function createFadeOut(selector: string, options?: AnimeAnimationOptions)
 	});
 }
 
-export function createStaggeredEntrance(selector: string, options?: AnimeAnimationOptions & { from?: string | number }) {
+export function createStaggeredEntrance(selector: string, options?: AnimeAnimationOptions) {
 	return animate(selector, {
 		opacity: [0, 1],
 		translateY: [30, 0],
 		scale: [0.9, 1],
-		delay: stagger(100, { from: options?.from || "first" }),
+		delay: stagger(100),
 		duration: options?.duration || 600,
 		ease: options?.ease || "outExpo",
 	});

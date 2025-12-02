@@ -1,4 +1,4 @@
-import { WhopApp } from "@whop/react/components";
+import { WhopAppWrapper } from "@/app/components/WhopAppWrapper";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Whop App",
-	description: "My Whop App",
+	title: "Armchair Workouts",
+	description: "Get fit from your couch with randomized workout routines",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<WhopApp>{children}</WhopApp>
+				<WhopAppWrapper>{children}</WhopAppWrapper>
 			</body>
 		</html>
 	);

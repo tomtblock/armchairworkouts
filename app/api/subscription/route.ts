@@ -42,26 +42,27 @@ export async function GET(request: NextRequest) {
 	
 	// If testmode param is set, create response with cookie
 	if (testModeParam === "premium" || testModeParam === "standard" || testModeParam === "off") {
-		const testTier = testModeParam === "off" ? null : testModeParam;
+		const isOff = testModeParam === "off";
+		const testTier: "standard" | "premium" | null = isOff ? null : testModeParam;
 		// Standard: Only unlimited spins
 		// Premium: Unlimited spins + Storage + Analytics
 		const testStatus: SubscriptionStatus & { demo: boolean; testMode: boolean; message: string } = {
-			tier: testTier === "off" ? "free" : (testTier as SubscriptionTier),
-			hasUnlimitedGenerations: testTier !== "off" && testTier !== null, // Both Standard & Premium
+			tier: isOff ? "free" : testTier!,
+			hasUnlimitedGenerations: !isOff && testTier !== null, // Both Standard & Premium
 			hasStorage: testTier === "premium", // Only Premium can save
 			hasAnalytics: testTier === "premium", // Only Premium can view analytics
-			freeSpinsRemaining: testTier === "off" ? 2 : Infinity,
-			products: testTier === "off" ? [] : ["test-mode"],
+			freeSpinsRemaining: isOff ? 2 : Infinity,
+			products: isOff ? [] : ["test-mode"],
 			demo: true,
-			testMode: testTier !== "off",
-			message: testTier === "off" 
+			testMode: !isOff,
+			message: isOff 
 				? "Test mode disabled" 
 				: `🧪 TEST MODE: ${testTier?.toUpperCase()} tier enabled`
 		};
 		
 		const response = NextResponse.json(testStatus);
 		
-		if (testTier === "off") {
+		if (isOff) {
 			// Clear the cookie
 			response.cookies.delete("armchair-test-mode");
 			console.log("🧪 Test mode DISABLED");
@@ -80,20 +81,22 @@ export async function GET(request: NextRequest) {
 	// Check if test mode is already enabled via cookie
 	if (isTestModeEnabled(request)) {
 		const testTier = getTestModeTier(request);
-		console.log(`🧪 Running in TEST MODE: ${testTier} tier`);
-		// Standard: Only unlimited spins
-		// Premium: Unlimited spins + Storage + Analytics
-		return NextResponse.json({
-			tier: testTier,
-			hasUnlimitedGenerations: true, // Both Standard & Premium
-			hasStorage: testTier === "premium", // Only Premium can save
-			hasAnalytics: testTier === "premium", // Only Premium
-			freeSpinsRemaining: Infinity,
-			products: ["test-mode"],
-			demo: true,
-			testMode: true,
-			message: `🧪 TEST MODE: ${testTier.toUpperCase()} tier - Add ?testmode=off to disable`
-		});
+		if (testTier) {
+			console.log(`🧪 Running in TEST MODE: ${testTier} tier`);
+			// Standard: Only unlimited spins
+			// Premium: Unlimited spins + Storage + Analytics
+			return NextResponse.json({
+				tier: testTier,
+				hasUnlimitedGenerations: true, // Both Standard & Premium
+				hasStorage: testTier === "premium", // Only Premium can save
+				hasAnalytics: testTier === "premium", // Only Premium
+				freeSpinsRemaining: Infinity,
+				products: ["test-mode"],
+				demo: true,
+				testMode: true,
+				message: `🧪 TEST MODE: ${testTier.toUpperCase()} tier - Add ?testmode=off to disable`
+			});
+		}
 	}
 
 	try {

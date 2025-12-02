@@ -85,7 +85,6 @@ export default function WorkoutHistoryDashboard({ isTestMode = false, testModeTi
 			animate(statsRef.current.querySelectorAll(".stat-item"), {
 				scale: [0.8, 1.1, 1],
 				opacity: [0, 1],
-			}, {
 				duration: 500,
 				delay: stagger(100),
 			});
@@ -177,7 +176,8 @@ export default function WorkoutHistoryDashboard({ isTestMode = false, testModeTi
 			animate(statsRef.current, {
 				scale: [1, 1.1, 1],
 				rotate: [0, 5, -5, 0],
-			}, { duration: 500 });
+				duration: 500,
+			});
 		}
 	};
 
