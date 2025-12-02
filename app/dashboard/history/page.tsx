@@ -1,9 +1,21 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { whopsdk } from "@/lib/whop-sdk";
 import { checkUserSubscription } from "@/app/api/subscription/check";
 import WorkoutHistoryDashboard from "@/app/components/forge/WorkoutHistoryDashboard";
 
 export default async function DashboardPage() {
+	// Check for test mode cookie
+	const cookieStore = await cookies();
+	const testModeCookie = cookieStore.get("armchair-test-mode")?.value;
+	const isTestMode = testModeCookie === "premium" || testModeCookie === "standard" || 
+		process.env.ENABLE_TEST_MODE === "true" || process.env.TEST_MODE_ENABLED === "true";
+	
+	// If in test mode, skip authentication and show full dashboard
+	if (isTestMode) {
+		console.log("🧪 Test mode active on dashboard history page");
+		return <WorkoutHistoryDashboard isTestMode={true} testModeTier={testModeCookie || "premium"} />;
+	}
+
 	// Ensure the user is logged in on whop.
 	const headersList = await headers();
 	
@@ -40,6 +52,9 @@ export default async function DashboardPage() {
 					</p>
 					<p className="text-gray-400 text-sm mb-4">
 						This dashboard must be accessed through your Whop experience.
+					</p>
+					<p className="text-[#FF00FF] text-sm mb-4 font-bold">
+						💡 TIP: Add ?testmode=premium to the main page URL to enable test mode
 					</p>
 					<p className="text-gray-500 text-xs" style={{
 						fontFamily: "'Courier New', monospace",

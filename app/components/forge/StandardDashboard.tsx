@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import HeaderStatusBar from "./HeaderStatusBar";
 import type { SubscriptionStatus } from "@/app/api/subscription/route";
 
 export default function StandardDashboard() {
+	const router = useRouter();
 	const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 
 	useEffect(() => {
@@ -29,7 +32,23 @@ export default function StandardDashboard() {
 		}}>
 			{/* Header Status Bar */}
 			<div className="w-full pt-4 z-10 relative">
-				<HeaderStatusBar status="online" ready={true} />
+				<div className="flex items-center justify-between px-4 mb-2">
+					<motion.button
+						onClick={() => router.back()}
+						whileHover={{ scale: 1.05 }}
+						whileTap={{ scale: 0.95 }}
+						className="px-4 py-2 border-2 border-[#00FFFF] rounded font-mono text-sm font-bold uppercase transition-all"
+						style={{
+							color: "#00FFFF",
+							background: "rgba(0, 255, 255, 0.05)",
+							boxShadow: "0 0 10px rgba(0, 255, 255, 0.3)",
+							textShadow: "0 0 5px rgba(0, 255, 255, 0.8)",
+						}}
+					>
+						← BACK
+					</motion.button>
+					<HeaderStatusBar status="online" ready={true} />
+				</div>
 			</div>
 
 			{/* Subscription Status */}

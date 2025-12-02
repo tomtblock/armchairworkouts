@@ -63,37 +63,62 @@ export async function checkUserSubscription(
 		tier = "standard";
 	}
 
-	// Get free spins remaining from database
-	let freeSpinsRemaining = 2; // Default
+	// Get free spins remaining from database and track user subscription
+	let freeSpinsRemaining = 3; // Default for new users
 	try {
-		const { data: userData } = await supabaseAdmin
+		const { data: userData, error: fetchError } = await supabaseAdmin
 			.from("user_subscriptions")
-			.select("free_spins_remaining")
+			.select("free_spins_remaining, tier")
 			.eq("user_id", userId)
-			.single();
+			.maybeSingle();
 
-		if (userData) {
-			freeSpinsRemaining = userData.free_spins_remaining || 0;
+		if (fetchError) {
+			// Table might not exist - just log and continue
+			console.warn("Could not fetch user subscription (table may not exist):", fetchError.message);
+		} else if (userData) {
+			freeSpinsRemaining = userData.free_spins_remaining ?? 0;
+			console.log(`📊 User ${userId} subscription loaded: tier=${userData.tier}, spins=${freeSpinsRemaining}`);
 		} else {
-			// First time user - initialize with 2 free spins
-			await supabaseAdmin
+			// First time user - initialize with 3 free spins and track their tier
+			console.log(`📝 Creating subscription record for new user ${userId}`);
+			const { error: insertError } = await supabaseAdmin
 				.from("user_subscriptions")
 				.insert({
 					user_id: userId,
-					free_spins_remaining: 2,
-					tier: "free",
+					free_spins_remaining: 3,
+					tier: tier, // Use the tier we determined from Whop
+					whop_product_id: userProducts[0] || null,
 				});
-			freeSpinsRemaining = 2;
+			
+			if (insertError) {
+				console.warn("Could not create user subscription:", insertError.message);
+			} else {
+				console.log(`✅ Created subscription record for user ${userId} with tier: ${tier}`);
+			}
+			freeSpinsRemaining = 3;
+		}
+		
+		// Update tier if it changed (e.g., user upgraded)
+		if (userData && userData.tier !== tier) {
+			console.log(`📈 Updating user ${userId} tier: ${userData.tier} → ${tier}`);
+			await supabaseAdmin
+				.from("user_subscriptions")
+				.update({ 
+					tier: tier,
+					whop_product_id: userProducts[0] || null,
+					updated_at: new Date().toISOString()
+				})
+				.eq("user_id", userId);
 		}
 	} catch (error) {
-		console.warn("Could not fetch free spins, using default:", error);
+		console.warn("Could not fetch/update free spins, using default:", error);
 	}
 
 	return {
 		tier,
-		hasUnlimitedGenerations: hasStandard || hasPremium,
-		hasStorage: hasPremium,
-		hasAnalytics: hasPremium,
+		hasUnlimitedGenerations: hasStandard || hasPremium, // Standard & Premium get unlimited spins
+		hasStorage: hasPremium, // Only Premium can save workouts
+		hasAnalytics: hasPremium, // Only Premium can view analytics
 		freeSpinsRemaining: tier === "free" ? freeSpinsRemaining : Infinity,
 		products: userProducts,
 	};

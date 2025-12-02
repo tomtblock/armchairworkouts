@@ -17,20 +17,47 @@ function getWhopSDK(): Whop {
 
 	// Only throw during runtime (when actually needed), not during build
 	if (!apiKey) {
+		console.error("❌ WHOP_API_KEY is missing from environment variables");
 		throw new Error(
 			"WHOP_API_KEY environment variable is missing. " +
 			"This is required for Whop API operations. " +
-			"Please set it in your environment variables."
+			"Please set it in your .env.development file and restart the dev server."
 		);
 	}
 
 	if (!appID) {
+		console.error("❌ NEXT_PUBLIC_WHOP_APP_ID is missing from environment variables");
 		throw new Error(
 			"NEXT_PUBLIC_WHOP_APP_ID environment variable is missing. " +
-			"This is required for Whop API operations."
+			"This is required for Whop API operations. " +
+			"Please set it in your .env.development file and restart the dev server."
 		);
 	}
 
+	// Validate API key format (allow both old and new formats)
+	// Newer Whop API keys may start with 'apik_' or other formats
+	const isValidFormat = apiKey.startsWith("whop_live_") || 
+	                     apiKey.startsWith("whop_test_") || 
+	                     apiKey.startsWith("apik_");
+	
+	if (!isValidFormat) {
+		console.warn("⚠️ WHOP_API_KEY format may be invalid. Expected formats: 'whop_live_', 'whop_test_', or 'apik_'");
+		console.warn(`   Current value starts with: ${apiKey.substring(0, 10)}...`);
+		// Don't throw - let the Whop SDK validate the key itself
+	}
+
+	// Validate App ID format
+	if (!appID.startsWith("app_")) {
+		console.error("❌ NEXT_PUBLIC_WHOP_APP_ID format is invalid. Should start with 'app_'");
+		console.error(`   Current value starts with: ${appID.substring(0, 10)}...`);
+		throw new Error(
+			"Invalid NEXT_PUBLIC_WHOP_APP_ID format. " +
+			"App IDs should start with 'app_'. " +
+			"Please check your .env.development file and get a valid App ID from Whop Dashboard."
+		);
+	}
+
+	console.log("✅ Whop SDK initializing with API key...");
 	whopsdkInstance = new Whop({
 		appID,
 		apiKey,
